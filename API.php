@@ -29,6 +29,7 @@ function api(string $publictoken, string $identifier, string $privatetoken, stri
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); 
+    curl_setopt($ch, CURLOPT_USERAGENT, '1Relation API Client/1.0.0');
     if ($method !== 'GET') {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         if (sizeof($data) > 0) {
@@ -41,20 +42,25 @@ function api(string $publictoken, string $identifier, string $privatetoken, stri
     
     // Execute CURL.
     $response = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    curl_close($ch);
+    if (curl_errno($ch)) {
+        die('cURL error: ' . curl_error($ch));
+    }
     
-    // Remove tracy debug bar.
-    $response = explode('<!-- Tracy Debug Bar -->', $response)[0];
+    curl_close($ch);
 
     // Decode response.
     $output = json_decode($response);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        die('Invalid JSON response: ' . json_last_error_msg());
+    }
 
     // Check if response is null.
-    if ($output === null) {
-        die('No response (' . $error . ') from API on ' . $url . ' (method: ' . $method . ')');
+    if (empty($output)) {
+        die('Output is empty on ' . $url . ' (method: ' . $method . ')');
     }
-    
+
     // Return response.
     return (object) $output;
 }
